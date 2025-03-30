@@ -1,0 +1,333 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Add Expense Items{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="page-title-box d-flex justify-content-between align-items-center">
+                <h4 class="page-title">Add Expense Items</h4>
+                <a href="{% url 'my_expenses' %}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to My Expenses
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Expense Claim Info -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <h5 class="card-title">{{ claim.claim_title }}</h5>
+                            {% if claim.description %}
+                            <p class="text-muted">{{ claim.description }}</p>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <div class="mb-2">
+                                <span class="badge bg-secondary">Draft</span>
+                            </div>
+                            <h5 class="mb-0">Total: ${{ claim.total_amount|floatformat:2 }}</h5>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Existing Items -->
+    {% if existing_items %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title">Existing Expense Items</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Category</th>
+                                    <th>Description</th>
+                                    <th>Amount</th>
+                                    <th>Receipt</th>
+                                    <th>Billable</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in existing_items %}
+                                <tr>
+                                    <td>{{ item.date|date:"M d, Y" }}</td>
+                                    <td>{{ item.category.name|default:"--" }}</td>
+                                    <td>{{ item.description }}</td>
+                                    <td class="text-end">${{ item.amount|floatformat:2 }}</td>
+                                    <td>
+                                        {% if item.receipt %}
+                                        <a href="{{ item.receipt.url }}" target="_blank" class="btn btn-sm btn-info">
+                                            <i class="fas fa-file-image"></i> View
+                                        </a>
+                                        {% else %}
+                                        --
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if item.is_billable %}
+                                        <i class="fas fa-check text-success"></i>
+                                        {% else %}
+                                        <i class="fas fa-times text-danger"></i>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Add Items Form -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title">Add Expense Items</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        {{ formset.management_form }}
+                        
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle"></i> Add one or more expense items (receipts) to your claim.
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="expense-items">
+                            {% for form in formset %}
+                            <div class="expense-item card mb-3">
+                                <div class="card-body">
+                                    <div class="row align-items-center mb-3">
+                                        <div class="col">
+                                            <h6 class="card-subtitle">Expense Item #{{ forloop.counter }}</h6>
+                                        </div>
+                                        <div class="col-auto">
+                                            {% if form.instance.pk %}{{ form.DELETE }}{% endif %}
+                                            <label class="form-check-label text-danger ms-2" for="{{ form.DELETE.id_for_label }}">Delete this item</label>
+                                        </div>
+                                    </div>
+                                    
+                                    {% for hidden_field in form.hidden_fields %}
+                                        {{ hidden_field }}
+                                    {% endfor %}
+                                    
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="{{ form.date.id_for_label }}" class="form-label">Date <span class="text-danger">*</span></label>
+                                                {{ form.date|addclass:"form-control datepicker" }}
+                                                {% if form.date.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {{ form.date.errors }}
+                                                </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="{{ form.category.id_for_label }}" class="form-label">Category</label>
+                                                {{ form.category|addclass:"form-select select2" }}
+                                                {% if form.category.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {{ form.category.errors }}
+                                                </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="row">
+                                        <div class="col-md-8">
+                                            <div class="mb-3">
+                                                <label for="{{ form.description.id_for_label }}" class="form-label">Description <span class="text-danger">*</span></label>
+                                                {{ form.description|addclass:"form-control" }}
+                                                {% if form.description.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {{ form.description.errors }}
+                                                </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="mb-3">
+                                                <label for="{{ form.amount.id_for_label }}" class="form-label">Amount <span class="text-danger">*</span></label>
+                                                <div class="input-group">
+                                                    <span class="input-group-text">$</span>
+                                                    {{ form.amount|addclass:"form-control" }}
+                                                </div>
+                                                {% if form.amount.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {{ form.amount.errors }}
+                                                </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="row">
+                                        <div class="col-md-8">
+                                            <div class="mb-3">
+                                                <label for="{{ form.receipt.id_for_label }}" class="form-label">Receipt</label>
+                                                {{ form.receipt|addclass:"form-control" }}
+                                                {% if form.receipt.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {{ form.receipt.errors }}
+                                                </div>
+                                                {% endif %}
+                                                <div class="form-text">
+                                                    Upload a photo or scan of your receipt (if available)
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="mb-3">
+                                                <label class="form-label d-block">&nbsp;</label>
+                                                <div class="form-check">
+                                                    {{ form.is_billable|addclass:"form-check-input" }}
+                                                    <label class="form-check-label" for="{{ form.is_billable.id_for_label }}">
+                                                        This expense is billable to client
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <button type="button" id="add-more-btn" class="btn btn-outline-primary">
+                                    <i class="fas fa-plus"></i> Add Another Item
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-12 text-end">
+                                <button type="submit" name="save_continue" class="btn btn-secondary me-2">
+                                    <i class="fas fa-save"></i> Save & Continue Editing
+                                </button>
+                                <button type="submit" name="save_submit" class="btn btn-primary">
+                                    <i class="fas fa-paper-plane"></i> Save & Submit for Approval
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script>
+    $(document).ready(function() {
+        // Initialize Select2
+        $('.select2').select2({
+            theme: 'bootstrap-5'
+        });
+        
+        // Initialize date picker
+        $('.datepicker').flatpickr({
+            dateFormat: 'Y-m-d',
+            maxDate: 'today'
+        });
+        
+        // Add more items functionality
+        $('#add-more-btn').click(function() {
+            // Clone the first form (empty form)
+            var newForm = $('.expense-item:first').clone(true);
+            
+            // Update form index
+            var formCount = parseInt($('#id_form-TOTAL_FORMS').val());
+            
+            // Update form IDs and names
+            newForm.find(':input').each(function() {
+                var name = $(this).attr('name');
+                if(name) {
+                    name = name.replace('-0-', '-' + formCount + '-');
+                    $(this).attr('name', name);
+                }
+                
+                var id = $(this).attr('id');
+                if(id) {
+                    id = id.replace('-0-', '-' + formCount + '-');
+                    $(this).attr('id', id);
+                }
+                
+                // Clear values
+                $(this).val('');
+                if($(this).attr('type') == 'checkbox') {
+                    $(this).prop('checked', false);
+                }
+            });
+            
+            // Update labels
+            newForm.find('label').each(function() {
+                var forAttr = $(this).attr('for');
+                if(forAttr) {
+                    forAttr = forAttr.replace('-0-', '-' + formCount + '-');
+                    $(this).attr('for', forAttr);
+                }
+            });
+            
+            // Update heading
+            newForm.find('h6').text('Expense Item #' + (formCount + 1));
+            
+            // Hide delete checkbox for new forms (optional)
+            newForm.find('input[type="checkbox"][name$="DELETE"]').parent().hide();
+            
+            // Append the new form
+            $('#expense-items').append(newForm);
+            
+            // Update form count
+            $('#id_form-TOTAL_FORMS').val(formCount + 1);
+            
+            // Reinitialize widgets for the new form
+            newForm.find('.select2').select2({
+                theme: 'bootstrap-5'
+            });
+            
+            newForm.find('.datepicker').flatpickr({
+                dateFormat: 'Y-m-d',
+                maxDate: 'today'
+            });
+        });
+    });
+</script>
+{% endblock %}

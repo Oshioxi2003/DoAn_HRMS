@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Create Expense Claim{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="page-title-box d-flex justify-content-between align-items-center">
+                <h4 class="page-title">Create Expense Claim</h4>
+                <a href="{% url 'my_expenses' %}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to My Expenses
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.claim_title.id_for_label }}" class="form-label">Expense Title <span class="text-danger">*</span></label>
+                            {{ form.claim_title|addclass:"form-control" }}
+                            {% if form.claim_title.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.claim_title.errors }}
+                            </div>
+                            {% endif %}
+                            <div class="form-text">
+                                Provide a descriptive title for your expense claim (e.g., "Business Trip to New York")
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.description.id_for_label }}" class="form-label">Description</label>
+                            {{ form.description|addclass:"form-control" }}
+                            {% if form.description.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.description.errors }}
+                            </div>
+                            {% endif %}
+                            <div class="form-text">
+                                Additional details about the expense claim
+                            </div>
+                        </div>
+                        
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> After creating the expense claim, you'll be able to add individual expense items (receipts) to it.
+                        </div>
+                        
+                        <div class="text-end">
+                            <button type="button" class="btn btn-secondary me-2" onclick="window.history.back();">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Create Expense Claim</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

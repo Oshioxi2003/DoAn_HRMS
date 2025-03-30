@@ -1,0 +1,453 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}HR Dashboard - HRMS{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.css">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="page-title-box">
+                <h4 class="page-title">Bảng điều khiển Nhân sự</h4>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Thống kê tổng quan -->
+    <div class="row">
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="stat-title">Tổng số nhân viên</h6>
+                        <div class="number">{{ total_employees }}</div>
+                        <p class="mb-0">Nhân viên đang hoạt động</p>
+                    </div>
+                    <div class="icon text-primary">
+                        <i class="fas fa-users"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="stat-title">Nhân viên mới</h6>
+                        <div class="number">{{ new_employees_this_month }}</div>
+                        <p class="mb-0">Tháng này</p>
+                    </div>
+                    <div class="icon text-success">
+                        <i class="fas fa-user-plus"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="stat-title">Yêu cầu nghỉ phép</h6>
+                        <div class="number">{{ pending_leaves }}</div>
+                        <p class="mb-0">Đang chờ phê duyệt</p>
+                    </div>
+                    <div class="icon text-warning">
+                        <i class="fas fa-calendar-alt"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="stat-title">Hợp đồng sắp hết hạn</h6>
+                        <div class="number">{{ expiring_contracts|length }}</div>
+                        <p class="mb-0">30 ngày tới</p>
+                    </div>
+                    <div class="icon text-danger">
+                        <i class="fas fa-file-contract"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Thao tác nhanh -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Thao tác nhanh</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-3 col-6">
+                            <a href="{% url 'employee_create' %}" class="btn btn-light w-100 text-start py-3">
+                                <i class="fas fa-user-plus text-primary me-2"></i> Thêm nhân viên
+                            </a>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <a href="{% url 'my_leave_requests' %}" class="btn btn-light w-100 text-start py-3">
+                                <i class="fas fa-calendar-check text-success me-2"></i> Quản lý nghỉ phép
+                            </a>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <a href="{% url 'my_attendance' %}" class="btn btn-light w-100 text-start py-3">
+                                <i class="fas fa-clipboard-check text-info me-2"></i> Chấm công
+                            </a>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <a href="{% url 'process_monthly_salary' %}" class="btn btn-light w-100 text-start py-3">
+                                <i class="fas fa-money-bill-wave text-warning me-2"></i> Xử lý lương
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Biểu đồ -->
+    <div class="row mt-4">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Phân bố nhân viên theo phòng ban</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="departmentChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Biến động nhân sự (Tuyển dụng vs Nghỉ việc)</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="employeeChangesChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mt-4">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Xu hướng chấm công (Tháng này)</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="attendanceChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Nghỉ phép theo loại (Năm nay)</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="leaveChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Hợp đồng sắp hết hạn -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Hợp đồng sắp hết hạn trong 30 ngày tới</h5>
+                    <a href="{% url 'contract_list' %}?expiring=1" class="btn btn-sm btn-primary">Xem tất cả</a>
+                </div>
+                <div class="card-body">
+                    {% if expiring_contracts %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Nhân viên</th>
+                                    <th>Phòng ban</th>
+                                    <th>Loại hợp đồng</th>
+                                    <th>Ngày bắt đầu</th>
+                                    <th>Ngày kết thúc</th>
+                                    <th>Số ngày còn lại</th>
+                                    <th>Hành động</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for contract in expiring_contracts %}
+                                <tr>
+                                    <td>{{ contract.employee.full_name }}</td>
+                                    <td>{{ contract.employee.department.department_name|default:"--" }}</td>
+                                    <td>{{ contract.contract_type }}</td>
+                                    <td>{{ contract.start_date|date:"M d, Y" }}</td>
+                                    <td>{{ contract.end_date|date:"M d, Y" }}</td>
+                                    <td>{{ contract.end_date|timeuntil }}</td>
+                                    <td>
+                                        <a href="{% url 'contract_detail' pk=contract.contract_id %}" class="btn btn-sm btn-primary">
+                                            <i class="fas fa-eye"></i> Xem
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-3">
+                        <i class="fas fa-file-contract fa-3x text-muted mb-3"></i>
+                        <p>Không có hợp đồng nào sắp hết hạn trong 30 ngày tới</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sinh nhật sắp tới và Tiếp nhận nhân viên mới đang chờ xử lý -->
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Sinh nhật sắp tới</h5>
+                </div>
+                <div class="card-body">
+                    {% if upcoming_birthdays %}
+                    <div class="list-group">
+                        {% for birthday in upcoming_birthdays %}
+                        <a href="{% url 'employee_detail' pk=birthday.id %}" class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">{{ birthday.name }}</h6>
+                                <small>Còn {{ birthday.days_until }} ngày</small>
+                            </div>
+                            <p class="mb-1">{{ birthday.next_birthday|date:"F d, Y" }}</p>
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-3">
+                        <i class="fas fa-birthday-cake fa-3x text-muted mb-3"></i>
+                        <p>Không có sinh nhật sắp tới</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Tiếp nhận nhân viên mới đang chờ xử lý</h5>
+                    <a href="{% url 'onboarding_list' %}" class="btn btn-sm btn-primary">Xem tất cả</a>
+                </div>
+                <div class="card-body">
+                    {% if pending_onboarding %}
+                    <div class="list-group">
+                        {% for onboarding in pending_onboarding %}
+                        <a href="{% url 'employee_onboarding_detail' employee_id=onboarding.employee.employee_id %}" class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">{{ onboarding.employee.full_name }}</h6>
+                                <small>{{ onboarding.status }}</small>
+                            </div>
+                            <p class="mb-1">{{ onboarding.employee.department.department_name|default:"Không có phòng ban" }}</p>
+                            <small>Mục tiêu: {{ onboarding.target_completion_date|date:"M d, Y" }}</small>
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-3">
+                        <i class="fas fa-user-plus fa-3x text-muted mb-3"></i>
+                        <p>Không có tiếp nhận nhân viên mới đang chờ xử lý</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Màu sắc biểu đồ
+    const colorPalette = {
+        blue: 'rgba(63, 81, 181, 0.8)',
+        blueLight: 'rgba(63, 81, 181, 0.2)',
+        green: 'rgba(76, 175, 80, 0.8)',
+        greenLight: 'rgba(76, 175, 80, 0.2)',
+        red: 'rgba(244, 67, 54, 0.8)',
+        redLight: 'rgba(244, 67, 54, 0.2)',
+        yellow: 'rgba(255, 152, 0, 0.8)',
+        yellowLight: 'rgba(255, 152, 0, 0.2)',
+    };
+    
+    // Biểu đồ phòng ban
+    const deptCtx = document.getElementById('departmentChart').getContext('2d');
+    new Chart(deptCtx, {
+        type: 'bar',
+        data: {
+            labels: {{ dept_names_json|safe }},
+            datasets: [{
+                label: 'Nhân viên',
+                data: {{ dept_counts_json|safe }},
+                backgroundColor: colorPalette.blue,
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        precision: 0
+                    }
+                }
+            }
+        }
+    });
+    
+    // Biểu đồ biến động nhân viên
+    const empChangesCtx = document.getElementById('employeeChangesChart').getContext('2d');
+    new Chart(empChangesCtx, {
+        type: 'bar',
+        data: {
+            labels: {{ employee_change_labels_json|safe }},
+            datasets: [
+                {
+                    label: 'Tuyển dụng',
+                    data: {{ hires_json|safe }},
+                    backgroundColor: colorPalette.green,
+                },
+                {
+                    label: 'Nghỉ việc',
+                    data: {{ separations_json|safe }},
+                    backgroundColor: colorPalette.red,
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        precision: 0
+                    }
+                }
+            }
+        }
+    });
+    
+    // Biểu đồ chấm công
+    const attendanceCtx = document.getElementById('attendanceChart').getContext('2d');
+    new Chart(attendanceCtx, {
+        type: 'line',
+        data: {
+            labels: {{ attendance_dates_json|safe }},
+            datasets: [
+                {
+                    label: 'Có mặt',
+                    data: {{ present_counts_json|safe }},
+                    borderColor: colorPalette.green,
+                    backgroundColor: colorPalette.greenLight,
+                    fill: true,
+                    tension: 0.4
+                },
+                {
+                    label: 'Vắng mặt',
+                    data: {{ absent_counts_json|safe }},
+                    borderColor: colorPalette.red,
+                    backgroundColor: colorPalette.redLight,
+                    fill: true,
+                    tension: 0.4
+                },
+                {
+                    label: 'Nghỉ phép',
+                    data: {{ leave_counts_json|safe }},
+                    borderColor: colorPalette.yellow,
+                    backgroundColor: colorPalette.yellowLight,
+                    fill: true,
+                    tension: 0.4
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        precision: 0
+                    }
+                }
+            }
+        }
+    });
+    
+    // Biểu đồ nghỉ phép
+    const leaveCtx = document.getElementById('leaveChart').getContext('2d');
+    new Chart(leaveCtx, {
+        type: 'bar',
+        data: {
+            labels: {{ leave_types_json|safe }},
+            datasets: [
+                {
+                    label: 'Số lượng yêu cầu',
+                    data: {{ leave_counts_by_type_json|safe }},
+                    backgroundColor: colorPalette.blue,
+                    order: 2
+                },
+                {
+                    label: 'Tổng số ngày',
+                    data: {{ leave_days_by_type_json|safe }},
+                    backgroundColor: colorPalette.red,
+                    type: 'line',
+                    order: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}
