@@ -139,4 +139,4 @@
 3. Chạy ứng dụng: `npm start` hoặc `python app.py`
 
 ## Liên Hệ
-📧 Email: support@company.com
+📧 Email: daotoandev@gmail.com
